@@ -1,0 +1,152 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:martfury/src/model/login_request.dart';
+import 'package:martfury/src/model/register_request.dart';
+import 'package:martfury/src/service/base_service.dart';
+import 'package:martfury/src/service/token_service.dart';
+import 'package:martfury/src/service/notification_service.dart';
+import 'package:martfury/src/view/screen/start_screen.dart';
+import 'package:get/get.dart';
+
+class AuthService extends BaseService {
+  Future<Map<String, dynamic>> login(LoginRequest request) async {
+    try {
+      final Map<String, Object> requestData = {};
+      final loginJson = request.toJson();
+
+      // Convert to Map<String, Object> to satisfy BaseService requirements
+      loginJson.forEach((key, value) {
+        if (value != null) {
+          requestData[key] = value;
+        }
+      });
+
+      final response = await postAuth('/login', requestData);
+
+      // Register device token after successful login
+      await NotificationService.registerDeviceToken();
+      return response['data'];
+    } catch (e) {
+      throw Exception('Failed to login: $e');
+    }
+  }
+
+  Future<String> forgotPassword(String email) async {
+    try {
+      final response = await postAuth('/password/forgot', {'email': email});
+      return response['message'];
+    } catch (e) {
+      throw Exception('Failed to process forgot password request: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> register(RegisterRequest request) async {
+    try {
+      final Map<String, Object> requestData = {};
+      final registerJson = request.toJson();
+
+      // Convert to Map<String, Object> to satisfy BaseService requirements
+      registerJson.forEach((key, value) {
+        if (value != null) {
+          requestData[key] = value;
+        }
+      });
+
+      if (kDebugMode) {
+        print('🔐 AuthService Register Request: ${json.encode(requestData)}');
+      }
+
+      final response = await postAuth('/register', requestData);
+
+      if (kDebugMode) {
+        print('🔐 AuthService Register Response: $response');
+      }
+
+      // Register device token after successful registration
+      await NotificationService.registerDeviceToken();
+      return response;
+    } catch (e) {
+      if (kDebugMode) {
+        print('🔐 AuthService Register Error: $e');
+      }
+      throw Exception('Failed to register: $e');
+    }
+  }
+
+  Future<void> signOut() async {
+    // Unregister device token before logout
+    await NotificationService.unregisterDeviceToken();
+    await TokenService.deleteToken();
+    Get.offAll(() => const StartScreen());
+  }
+
+  Future<Map<String, dynamic>> signInWithApple(
+    String identityToken,
+  ) async {
+    try {
+      final response = await postAuth('/auth/apple', {
+        'identityToken': identityToken,
+        'guard': 'customer',
+      });
+
+      // Register device token after successful Apple login
+      await NotificationService.registerDeviceToken();
+      return response['data'];
+    } catch (e) {
+      throw Exception('Failed to login with Apple: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> signInWithGoogle(
+    String identityToken,
+  ) async {
+    try {
+      final response = await postAuth('/auth/google', {
+        'identityToken': identityToken,
+        'guard': 'customer',
+      });
+
+      // Register device token after successful Google login
+      await NotificationService.registerDeviceToken();
+      return response['data'];
+    } catch (e) {
+      throw Exception('Failed to login with Google: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> signInWithFacebook(
+    String accessToken,
+  ) async {
+    try {
+      final response = await postAuth('/auth/facebook', {
+        'accessToken': accessToken,
+        'guard': 'customer',
+      });
+
+      // Register device token after successful Facebook login
+      await NotificationService.registerDeviceToken();
+      return response['data'];
+    } catch (e) {
+      throw Exception('Failed to login with Facebook: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> signInWithTwitter(
+    String accessToken,
+    String accessTokenSecret,
+  ) async {
+    try {
+      final response = await postAuth('/auth/twitter', {
+        'accessToken': accessToken,
+        'accessTokenSecret': accessTokenSecret,
+        'guard': 'customer',
+      });
+
+      // Register device token after successful Twitter login
+      await NotificationService.registerDeviceToken();
+      return response['data'];
+    } catch (e) {
+      throw Exception('Failed to login with Twitter: $e');
+    }
+  }
+}
