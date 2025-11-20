@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   test:
     name: Test
@@ -25,7 +29,7 @@ jobs:
       run: flutter pub get
       
     - name: Verify formatting
-      run: flutter format --output=none --set-exit-if-changed .
+      run: dart format --output=none --set-exit-if-changed .
       
     - name: Analyze project source
       run: flutter analyze
@@ -127,7 +131,7 @@ jobs:
         output: 'trivy-results.sarif'
         
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
